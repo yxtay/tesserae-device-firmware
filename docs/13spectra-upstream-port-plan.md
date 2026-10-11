@@ -70,11 +70,12 @@ The 13SPECTRA blob is close to the existing GDEP133C02 variant. Only PSR, PLL, B
    - Flash and partitions: 16 MB with `partitions_ota.csv` to begin with. Move to the 32 MB e1004-ota layout only after `esptool flash_id` confirms 32 MB. This repo's env claims 32 MB but uses `default_16MB.csv`.
    - Add the board to the `.github/workflows/firmware.yml` build matrix and the `release.yml` matrix. Add the BLE code to `docs/ble-setup-protocol.md`.
 
-5. **Battery (second pass, separate commit).**
+5. **Battery (done, separate commit).**
    - Hardware: battery ADC on GPIO1 with a ×2 divider. The measure enable is expander P1-1 on a PCAL6416A at 0x20, not a GPIO, and it only works with jumper JP5 shorted.
    - Reuse: the PCA9535 helper in `src/panel/drivers/parallel_epd_gray.c:~302-361` has the same register map (in 0/1, out 2/3, cfg 6/7). Lift it into a small shared `src/io_expander.c` that both the parallel driver and battery code use.
    - `src/battery.c`: add a `BOARD_VBAT_SWITCH_EXP_PIN` hook next to `BOARD_VBAT_SWITCH_PIN`.
-   - Open item: the I2C pins are unconfirmed. ESPHome has SDA 8 / SCL 9 marked TODO; check them against the Soldered Arduino lib `pins.h` first.
+   - Polarity: two board revisions. Soldered's `readBattery()` reads expander pin 9 as an input first (HIGH = older PMOS-only, enable by driving LOW; LOW = newer PMOS+NMOS, enable HIGH). `battery.c` mirrors that.
+   - Open item: the I2C pins are still unconfirmed. Soldered calls `Wire.begin()` with no pins (they come from their unpublished board variant), so SDA 8 / SCL 9 (the S3 Arduino default, as in ESPHome's TODO) is a guess. Bench: I2C scan for 0x20 (PCAL6416A) and 0x51 (PCF85063A); if the expander never answers, battery reads 0 mV = "unknown".
 
 **Deferred (YAGNI until asked):**
 - PCF85063A RTC: a different chip from the PCF8563, so a new driver. The HTTP Date header covers the clock meanwhile.
@@ -108,7 +109,7 @@ Do none of this until the bench test passes.
    - nothing is left on BUSY timeout in the log.
 4. Flash the main env and go through the captive portal (AP "Tesserae-Setup"). Pair with the server, then check:
    - the frame paints in the correct orientation;
-   - the status shows battery as absent;
+   - the status shows a plausible battery voltage (JP5 shorted; ~0 / unknown if open);
    - the GPIO18 button wakes the device and triggers a refresh;
    - deep sleep then wakes on the timer.
 5. Optional: test OTA from the server to the inactive slot.
