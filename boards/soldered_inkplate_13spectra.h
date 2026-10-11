@@ -10,8 +10,7 @@
  * Soldered-Inkplate-ESPHome inkplate_spi component.
  *
  * NOT YET VERIFIED ON HARDWARE. Open points: DC handling under the BS0/BS1
- * strap mode, flash size (16 MB table used until `esptool flash_id` confirms
- * more) (see docs/13spectra-upstream-port-plan.md).
+ * strap mode (see docs/13spectra-upstream-port-plan.md).
  */
 #pragma once
 

@@ -67,7 +67,7 @@ The 13SPECTRA blob is close to the existing GDEP133C02 variant. Only PSR, PLL, B
 4. **`platformio.ini`**: add `[env:soldered-inkplate-13spectra]` and a `-selftest` variant, cloned from the E1004 env at L94/L109.
    - Board: `esp32-s3-devkitc1-n16r8`.
    - Fragments: `sdkconfig.defaults` and `sdkconfig.ble.defaults`.
-   - Flash and partitions: 16 MB with `partitions_ota.csv` to begin with. Move to the 32 MB e1004-ota layout only after `esptool flash_id` confirms 32 MB. This repo's env claims 32 MB but uses `default_16MB.csv`.
+   - Flash and partitions: the module is an ESP32-S3-WROOM-2-N32R16V (32 MB flash, 16 MB octal PSRAM, per the Crowd Supply listing). `sdkconfig.inkplate13spectra.defaults` sets 32 MB; the existing `partitions_ota.csv` A/B layout already fits (nothing past 0x830000), so no new table. The env still builds against the n16r8 PlatformIO board variant, as the E1004 does.
    - Add the board to the `.github/workflows/firmware.yml` build matrix and the `release.yml` matrix. Add the BLE code to `docs/ble-setup-protocol.md`.
 
 5. **Battery (done, separate commit).**
@@ -97,7 +97,7 @@ Do none of this until the bench test passes.
 1. **DC line.** The Soldered code never drives DC low, because the BS0=0/BS1=1 strap may select a mode that ignores DC. The upstream driver toggles DC, which should be fine in 4-wire mode. The selftest shows whether it works.
 2. **Frame orientation.** Upstream `image_decoder.c` checks only the length, and 960000 bytes is the same in both orientations. Check that the server renders the `soldered_inkplate_13spectra` kind as native portrait 1200×1600 like the E1004; this repo currently paints landscape frames with rotation 1. If the server sends landscape, fix the server catalog to native portrait. Do not add rotation to the firmware.
 3. **Order of operations.** Inkplate does PON before DTM and waits on BUSY after each half; the E1004 driver does DTM, then PON, then DRF. If the selftest shows a blank or garbled half, switch to the Inkplate order under the variant macro.
-4. **Flash size.** Check it with `esptool flash_id` before choosing the partition table.
+4. **Flash size.** Settled at 32 MB (Crowd Supply). `esptool flash_id` is still a quick sanity check before first flash.
 
 ## Verification
 
