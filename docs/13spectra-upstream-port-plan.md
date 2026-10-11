@@ -83,6 +83,19 @@ The 13SPECTRA blob is close to the existing GDEP133C02 variant. Only PSR, PLL, B
 - Partial refresh: the ESPHome code has PTLW, but the driver has no partial hooks.
 - 6COLOR port: needs a new ACeP 5.65" init block in `spectra6_spi_single`.
 
+## Soldered docs review (docs.soldered.com/inkplate/13spectra)
+
+The docs confirm the pins, init order and battery logic above; they add no contradictions. SDA/SCL, flash/PSRAM, RTC address and refresh time are not stated, and the schematic/KiCad files are "not available yet". Extra facts worth keeping:
+
+- **Console:** USB-C goes through a CH340 UART bridge, not native USB CDC. The base `sdkconfig.defaults` already makes UART the primary console, so no change is needed.
+- **Panel:** full refresh only (no partial update, no grayscale); operating range 0-50 C. A large refresh can brown out a weak USB port.
+- **Sleep:** cut PWR_EN and float the panel pins before sleep; the panel needs a reset after wake.
+- **Jumpers** (defaults): JP1 closed, expander INT to IO16; JP2 open, RTC clock out to IO2; JP3 open, SD at 3.3 V permanently; JP4 open, SD CS to GPIO15; JP5 open, P1_1 to the battery circuit; JP6 closed, P1_2 to the SD power MOSFET.
+- **SD (deferred):** SPI MOSI 11 / SCK 12 / MISO 13. The docs say CS is IO15 via JP4, but the Arduino library uses GPIO10, so check the schematic. Power it by driving expander pin 10 LOW, then wait 200 ms before init.
+- **Battery connector:** the battery page says + is on the right (notch up), the FAQ says left. Check the silkscreen before plugging one in.
+- **Colours:** the docs table lists blue/green as 4/5, but the library sends 5/6, which matches our 0,1,2,3,5,6 codes.
+- **Free GPIO:** IO17 is free.
+
 ## This repo after the port
 
 Once the upstream env is proven on hardware:
