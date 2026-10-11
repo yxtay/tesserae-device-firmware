@@ -11,7 +11,7 @@
  *
  * NOT YET VERIFIED ON HARDWARE. Open points: DC handling under the BS0/BS1
  * strap mode, flash size (16 MB table used until `esptool flash_id` confirms
- * more), I2C pins (see docs/13spectra-upstream-port-plan.md).
+ * more) (see docs/13spectra-upstream-port-plan.md).
  */
 #pragma once
 
@@ -60,9 +60,10 @@
 /* Battery: ADC GPIO1 (ADC1 ch0), x2 divider, enabled via PCAL6416A P1-1 (expander
  * pin 9; Soldered readBattery()). Only reads with jumper JP5 shorted -- open, the
  * divider is cut off and the ADC sees ~0 (reported as "unknown", not flat).
- * I2C SDA/SCL are NOT confirmed: Soldered calls Wire.begin() with no pins, so they
- * come from their (unpublished) board variant. 8/9 is the ESP32-S3 Arduino default
- * and matches the ESPHome model's TODO; verify with an I2C scan on the bench. */
+ * I2C is SDA 8 / SCL 9: Soldered's library calls Wire.begin() with no pins and
+ * builds on the generic esp32-s3-devkitc-1 variant (inkplate-tesserae-driver
+ * firmware/platformio.ini), whose default Wire pins are 8/9. */
+
 #define BOARD_BATTERY_ADC_CHANNEL        ADC_CHANNEL_0
 #define BOARD_BATTERY_DIVIDER            2
 #define BOARD_VBAT_SWITCH_EXP_PIN        1      /* port-1 bit; expander pin 9 */

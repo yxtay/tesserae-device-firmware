@@ -75,7 +75,7 @@ The 13SPECTRA blob is close to the existing GDEP133C02 variant. Only PSR, PLL, B
    - Reuse: the PCA9535 helper in `src/panel/drivers/parallel_epd_gray.c:~302-361` has the same register map (in 0/1, out 2/3, cfg 6/7). Lift it into a small shared `src/io_expander.c` that both the parallel driver and battery code use.
    - `src/battery.c`: add a `BOARD_VBAT_SWITCH_EXP_PIN` hook next to `BOARD_VBAT_SWITCH_PIN`.
    - Polarity: two board revisions. Soldered's `readBattery()` reads expander pin 9 as an input first (HIGH = older PMOS-only, enable by driving LOW; LOW = newer PMOS+NMOS, enable HIGH). `battery.c` mirrors that.
-   - Open item: the I2C pins are still unconfirmed. Soldered calls `Wire.begin()` with no pins (they come from their unpublished board variant), so SDA 8 / SCL 9 (the S3 Arduino default, as in ESPHome's TODO) is a guess. Bench: I2C scan for 0x20 (PCAL6416A) and 0x51 (PCF85063A); if the expander never answers, battery reads 0 mV = "unknown".
+   - I2C pins: SDA 8 / SCL 9. Soldered calls `Wire.begin()` with no pins and the working Arduino build uses the generic `esp32-s3-devkitc-1` variant, whose default Wire pins are 8/9. Bench: if the expander never answers, battery reads 0 mV = "unknown".
 
 **Deferred (YAGNI until asked):**
 - PCF85063A RTC: a different chip from the PCF8563, so a new driver. The HTTP Date header covers the clock meanwhile.
