@@ -80,7 +80,7 @@ The 13SPECTRA blob is close to the existing GDEP133C02 variant. Only PSR, PLL, B
 **Deferred (YAGNI until asked):**
 - PCF85063A RTC: a different chip from the PCF8563, so a new driver. The HTTP Date header covers the clock meanwhile.
 - SD card: needs jumper JP4.
-- Partial refresh: the ESPHome code has PTLW, but the driver has no partial hooks.
+- Partial refresh: not supported by the panel (Soldered docs: full refresh only), so not planned.
 - 6COLOR port: needs a new ACeP 5.65" init block in `spectra6_spi_single`.
 
 ## Soldered docs review (docs.soldered.com/inkplate/13spectra)
