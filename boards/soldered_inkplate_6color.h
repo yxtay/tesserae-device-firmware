@@ -1,7 +1,9 @@
 /*
  * Board: Soldered Inkplate 6COLOR
  *   - Module: ESP32 (WROVER, quad PSRAM), classic ESP32 -- no BLE, like the M5Paper
- *   - Panel:  5.85" 600x448 7-colour ACeP, single controller, SPI (UC81xx family)
+ *   - Panel:  5.65" 600x448 7-colour ACeP (E Ink AC057TC1), SPI (UC81xx-style
+ *             command set). A full refresh takes about 12 s; operating range is
+ *             15-35 C, no partial update
  *
  * Reuses spectra6_spi_single with EPD_INIT_INKPLATE6COLOR, which swaps in
  * Soldered's init block. Pins, init bytes and the battery path come from
@@ -11,7 +13,9 @@
  * community inkplate-tesserae-driver firmware), so frames go through
  * EPD_NIBBLE_REMAP before they reach the panel.
  *
- * Flash is assumed 4 MB (not stated in Soldered's sources). RTC (PCF85063A at
+ * Pins checked against the V1.2.1 schematic (Soldered-Inkplate-6-COLOR-hardware-
+ * design, OUTPUTS/V1.2.1) and https://docs.soldered.com/inkplate/6color/. Flash is
+ * assumed 4 MB (neither the schematic, BOM nor docs state it). RTC (PCF85063A at
  * 0x51, INT on GPIO39), touchpads and the SD slot are not used.
  * UNVERIFIED ON HARDWARE.
  */
