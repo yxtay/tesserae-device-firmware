@@ -36,6 +36,8 @@
 #  include "gooddisplay_esp32_133c02.h"
 #elif defined(TESSERAE_BOARD_SOLDERED_INKPLATE_13SPECTRA)
 #  include "soldered_inkplate_13spectra.h"
+#elif defined(TESSERAE_BOARD_SOLDERED_INKPLATE_6COLOR)
+#  include "soldered_inkplate_6color.h"
 #elif defined(TESSERAE_BOARD_XIAO_EPAPER_75)
 #  include "seeed_xiao_epaper_75.h"
 #elif defined(TESSERAE_BOARD_XIAO_EPAPER_75_C3)

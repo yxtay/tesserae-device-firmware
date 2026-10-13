@@ -127,6 +127,16 @@ static bool send_buffer(const uint8_t *data, size_t len)
     return true;
 }
 
+#if defined(EPD_NIBBLE_REMAP) && !defined(EPD_ROTATE_180)
+#error "EPD_NIBBLE_REMAP is only wired into the EPD_ROTATE_180 path"
+#endif
+
+#ifdef EPD_NIBBLE_REMAP
+/* Server nibble -> panel nibble, applied to image data only (clear and the
+ * colour bars already use panel codes). */
+static const uint8_t s_nibble_remap[16] = EPD_NIBBLE_REMAP;
+#endif
+
 #ifdef EPD_ROTATE_180
 /* Stream a full frame rotated 180 degrees: panel byte i is pulled from source
  * byte (len-1-i) (reverses row + column-pair order in one shot on this flat
@@ -144,6 +154,9 @@ static bool send_buffer_rot180(const uint8_t *data, size_t len)
         const uint8_t *src = src_end - chunk;
         for (size_t i = 0; i < chunk; i++) {
             uint8_t b = src[chunk - 1 - i];
+#ifdef EPD_NIBBLE_REMAP
+            b = (uint8_t)((s_nibble_remap[b >> 4] << 4) | s_nibble_remap[b & 0x0f]);
+#endif
             local[i] = (uint8_t)((b << 4) | (b >> 4));
         }
         spi_device_acquire_bus(s_spi, portMAX_DELAY);
@@ -246,7 +259,8 @@ static const uint8_t BTST3[] = {0x6f, 0x1f, 0x1f, 0x22};
 static const uint8_t PLL[]   = {0x03};
 static const uint8_t CDI[]   = {0x3f};
 static const uint8_t TCON[]  = {0x02, 0x00};
-static const uint8_t TRES[]  = {0x03, 0x20, 0x01, 0xe0};   /* 0x0320=800 x 0x01e0=480 */
+static const uint8_t TRES[]  = {EPD_WIDTH >> 8, EPD_WIDTH & 0xff,
+                                EPD_HEIGHT >> 8, EPD_HEIGHT & 0xff};   /* 800x480 = 03 20 01 e0 */
 static const uint8_t TVDCS[] = {0x01};
 static const uint8_t PWS[]   = {0x2f};
 
@@ -380,9 +394,47 @@ static bool run_init_sequence_acep(void)
 }
 #endif /* EPD_INIT_ACEP_7IN3F */
 
+#ifdef EPD_INIT_INKPLATE6COLOR
+/* Soldered Inkplate 6COLOR (600x448 ACeP), from Soldered's Inkplate-Arduino-library
+ * (Inkplate6COLORDriver.cpp, setPanelDeepSleep(false)). The settle before reset
+ * matters: Soldered's ESPHome component reports init failures without it. The
+ * resolution bytes are the same 0x61 block TRES builds from the board size. */
+static const uint8_t I6_PSR[]  = {0xef, 0x08};
+static const uint8_t I6_PWR[]  = {0x37, 0x00, 0x05, 0x05};
+static const uint8_t I6_PFS[]  = {0x00};
+static const uint8_t I6_BTST[] = {0xc7, 0xc7, 0x1d};
+static const uint8_t I6_TSE[]  = {0x00};
+static const uint8_t I6_CDI[]  = {0x37};
+static const uint8_t I6_TCON[] = {0x20};
+static const uint8_t I6_PWS[]  = {0xaa};
+
+static bool run_init_sequence_inkplate6color(void)
+{
+    vTaskDelay(pdMS_TO_TICKS(100));
+    gpio_set_level(EPD_PIN_RST, 1);
+    gpio_set_level(EPD_PIN_RST, 0); vTaskDelay(pdMS_TO_TICKS(10));
+    gpio_set_level(EPD_PIN_RST, 1); vTaskDelay(pdMS_TO_TICKS(200));
+    if (!wait_busy("reset")) return false;
+
+    if (!cmd_data(0x00, I6_PSR,  sizeof I6_PSR))  return false;
+    if (!cmd_data(0x01, I6_PWR,  sizeof I6_PWR))  return false;
+    if (!cmd_data(0x03, I6_PFS,  sizeof I6_PFS))  return false;
+    if (!cmd_data(0x06, I6_BTST, sizeof I6_BTST)) return false;
+    if (!cmd_data(0x41, I6_TSE,  sizeof I6_TSE))  return false;
+    if (!cmd_data(0x50, I6_CDI,  sizeof I6_CDI))  return false;
+    if (!cmd_data(0x60, I6_TCON, sizeof I6_TCON)) return false;
+    if (!cmd_data(0x61, TRES,    sizeof TRES))    return false;
+    if (!cmd_data(0xe3, I6_PWS,  sizeof I6_PWS))  return false;
+    vTaskDelay(pdMS_TO_TICKS(100));
+    return cmd_data(0x50, I6_CDI, sizeof I6_CDI);
+}
+#endif /* EPD_INIT_INKPLATE6COLOR */
+
 static void s6s_init(void)
 {
-#if defined(EPD_INIT_ACEP_7IN3F)
+#if defined(EPD_INIT_INKPLATE6COLOR)
+    const bool ok = run_init_sequence_inkplate6color();
+#elif defined(EPD_INIT_ACEP_7IN3F)
     const bool ok = run_init_sequence_acep();
 #elif defined(EPD_S6_INIT_GDEP073E01_V2)
     const bool ok = run_init_sequence_v2();
@@ -400,6 +452,20 @@ static bool trigger_refresh(void)
     if (!cmd(0x04)) return false;                 /* power on */
     if (!wait_busy("power on")) return false;
 
+#ifdef EPD_INIT_INKPLATE6COLOR
+    /* Soldered sends DRF and POF with no parameter byte, and after POF BUSY
+     * settles LOW (not high as on the other panels): wait for it to fall. */
+    if (!cmd(0x12)) return false;                             /* display refresh */
+    if (!wait_busy("refresh")) return false;
+
+    if (!cmd(0x02)) return false;                             /* power off */
+    bool ok = true;
+    for (uint32_t waited_ms = 0; gpio_get_level(EPD_PIN_BUSY); waited_ms += 10) {
+        if (waited_ms > 5000) { ESP_LOGW(TAG, "power off: BUSY stayed high"); ok = false; break; }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    vTaskDelay(pdMS_TO_TICKS(200));
+#else
     static const uint8_t DRF_V[] = {0x00};
     if (!cmd_data(0x12, DRF_V, sizeof DRF_V)) return false;   /* display refresh */
     if (!wait_busy("refresh")) return false;
@@ -407,6 +473,7 @@ static bool trigger_refresh(void)
     static const uint8_t POF_V[] = {0x00};
     if (!cmd_data(0x02, POF_V, sizeof POF_V)) return false;   /* power off */
     bool ok = wait_busy("power off");
+#endif
     ESP_LOGI(TAG, "refresh done");
     return ok;
 }
@@ -492,7 +559,9 @@ static void s6s_sleep(void)
 
 const epd_driver_t spectra6_spi_single_driver = {
     .info = {
-#ifdef EPD_INIT_ACEP_7IN3F
+#if defined(EPD_INIT_INKPLATE6COLOR)
+        .name      = "ACeP 7-colour single (600x448)",
+#elif defined(EPD_INIT_ACEP_7IN3F)
         .name      = "ACeP 7-colour single (800x480)",
 #else
         .name      = "Spectra-6 single (800x480)",

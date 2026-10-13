@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Soldered Inkplate 6COLOR (`soldered-inkplate-6color`): the 600x448 7-colour
+  ACeP panel on `spectra6_spi_single` with Soldered's init block
+  (`EPD_INIT_INKPLATE6COLOR`), on a classic ESP32 with quad PSRAM and no BLE.
+  The driver now builds the 0x61 resolution bytes from `EPD_WIDTH`/`EPD_HEIGHT`
+  (unchanged for the 800x480 boards) and a board can set `EPD_NIBBLE_REMAP` to
+  map the server's `inky_7colour` indices onto the panel's order, which differ
+  at 2..5. Battery through the PCAL6416A expander, GPIO36 wake button. Flash
+  size (4 MB) is assumed. Not yet checked on hardware. The Waveshare 7.3" F
+  board likely needs the same index remap.
 - Soldered Inkplate 13SPECTRA (`soldered-inkplate-13spectra`): the 13.3"
   Spectra 6 panel on the shared T133A01 dual-controller driver with Soldered's
   init values, battery through the PCAL6416A expander (needs JP5 shorted) and

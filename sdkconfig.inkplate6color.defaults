@@ -1,0 +1,8 @@
+# Soldered Inkplate 6COLOR: 4 MB flash (assumed; Soldered's sources don't say).
+# Layered after sdkconfig.esp32-psram.defaults (16 MB) and sdkconfig.ota.defaults
+# (partitions_ota.csv, 4 MiB slots), so both are overridden to fit a 4 MB part:
+# the A/B table drops to partitions_4m_ota.csv's 1.94 MiB slots.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_4m_ota.csv"
